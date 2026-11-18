@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مشروع حصار الزراعي | معاينة الخريطة التفاعلية (Hassar 16-11-2026)</title>
+
+  <!-- Arabic Font: Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet 1.9.4 CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- JSZip 3.10.1 (for KMZ decompression in browser) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <!-- Leaflet 1.9.4 JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <style>
+    * {
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #020617;
+    }
+
+    /* Custom Scrollbar */
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
+    }
+
+    /* Leaflet Overrides for RTL & Premium Look */
+    .leaflet-container {
+      background: #0f172a;
+      font-family: 'Cairo', sans-serif !important;
+    }
+
+    .leaflet-container.measuring-cursor {
+      cursor: crosshair !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.96);
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 16px;
+      box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(12px);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .leaflet-popup-content {
+      margin: 0 !important;
+      width: 300px !important;
+      max-width: 82vw !important;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .leaflet-popup-close-button {
+      color: #cbd5e1 !important;
+      font-size: 20px !important;
+      top: 10px !important;
+      left: 10px !important;
+      right: auto !important;
+      width: 28px !important;
+      height: 28px !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.7) !important;
+      transition: all 0.15s ease;
+    }
+
+    .leaflet-popup-close-button:hover {
+      color: #ffffff !important;
+      background: rgba(239, 68, 68, 0.75) !important;
+    }
+
+    /* Parcel Permanent Labels */
+    .parcel-label {
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+      pointer-events: none;
+      direction: rtl;
+    }
+
+    .parcel-label::before {
+      display: none !important;
+    }
+
+    /* Zoom Control Positioning */
+    .leaflet-bottom.leaflet-left {
+      bottom: 16px;
+      left: 16px;
+    }
+
+    .leaflet-control-zoom {
+      border: 1px solid rgba(148, 163, 184, 0.25) !important;
+      border-radius: 12px !important;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .leaflet-control-zoom a {
+      background-color: rgba(15, 23, 42, 0.9) !important;
+      color: #f8fafc !important;
+      border-bottom-color: rgba(148, 163, 184, 0.2) !important;
+      width: 36px !important;
+      height: 36px !important;
+      line-height: 36px !important;
+      font-weight: 700;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background-color: rgba(16, 185, 129, 0.85) !important;
+      color: #fff !important;
+    }
+
+    /* Range Slider */
+    input[type="range"] {
+      accent-color: #10b981;
+    }
+
+    /* Subtle Pulse Animation for Highlighted Polygon */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up {
+      animation: fadeSlideUp 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 select-none">
+
+  <!-- Main App Shell -->
+  <div class="relative flex h-screen w-screen overflow-hidden">
+
+    <!-- Mobile Backdrop for Sidebar Drawer -->
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[1050] hidden md:hidden transition-opacity" onclick="toggleSidebar(false)"></div>
+
+    <!-- Collapsible Right-Hand RTL Sidebar -->
+    <aside id="sidebar" class="fixed md:relative top-0 right-0 z-[1100] h-full w-[88vw] max-w-[395px] md:w-[395px] shrink-0 bg-slate-900/95 backdrop-blur-xl border-l border-slate-700/60 shadow-2xl flex flex-col transition-all duration-300 ease-in-out">
+
+      <!-- Sidebar Header -->
+      <div class="p-4 border-b border-slate-800/90 bg-gradient-to-l from-emerald-950/50 to-slate-900 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+              <line x1="9" y1="3" x2="9" y2="18"></line>
+              <line x1="15" y1="6" x2="15" y2="21"></line>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h1 id="projectTitle" class="text-base font-extrabold text-white truncate">مشروع حصار الزراعي</h1>
+            <p id="projectSubtitle" class="text-xs text-emerald-300/90 font-medium truncate">Hassar 16-11-2026 • نظام GIS</p>
+          </div>
+        </div>
+        <button onclick="toggleSidebar(false)" title="إخفاء القائمة" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Custom Uploaded Dataset Banner (hidden by default) -->
+      <div id="customFileBanner" class="hidden px-4 py-2.5 bg-amber-500/15 border-b border-amber-400/30 flex items-center justify-between gap-2 text-xs">
+        <span class="text-amber-200 font-semibold truncate">ملف مستورد: <span id="customFileName"></span></span>
+        <button onclick="restoreDefaultProject()" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shrink-0 transition cursor-pointer">
+          استعادة حصار
+        </button>
+      </div>
+
+      <!-- Sidebar Navigation Tabs -->
+      <div class="grid grid-cols-2 gap-1.5 p-2.5 bg-slate-950/60 border-b border-slate-800">
+        <button id="tabBtnLayers" onclick="switchTab('layers')" class="py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>الملخص والطبقات</span>
+        </button>
+        <button id="tabBtnParcels" onclick="switchTab('parcels')" class="py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-slate-800/70 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>القطع (<span id="totalParcelsBadge">61</span>)</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: Summary KPIs & Layer Filters -->
+      <div id="tabContentLayers" class="flex-1 overflow-y-auto custom-scroll p-3.5 space-y-4">
+
+        <!-- Top KPI Cards -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="p-3 rounded-2xl bg-slate-800/70 border border-slate-700/60 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold mb-1">المساحة الكلية (المذكورة)</div>
+            <div class="text-lg font-extrabold text-emerald-400" id="kpiTotalStated">2,353.5 <span class="text-xs font-semibold text-slate-300">دونم</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5" id="kpiTotalCalcNote">جيوديسي: -- دونم</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-800/70 border border-slate-700/60 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold mb-1">مجموع القطع الداخلية</div>
+            <div class="text-lg font-extrabold text-sky-400" id="kpiInnerCalc">-- <span class="text-xs font-semibold text-slate-300">دونم</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5" id="kpiInnerStated">المذكور: -- دونم • 60 قطعة</div>
+          </div>
+        </div>
+
+        <!-- Layer Controls Header -->
+        <div class="flex items-center justify-between pt-1">
+          <h2 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            طبقات المشروع وتوزيع المساحات
+          </h2>
+          <div class="flex items-center gap-1.5">
+            <button onclick="setAllCategories(true)" class="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-emerald-300 border border-slate-700 transition cursor-pointer">الكل</button>
+            <button onclick="setAllCategories(false)" class="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-rose-300 border border-slate-700 transition cursor-pointer">إخفاء</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Category Filter List -->
+        <div id="categoryList" class="space-y-2"></div>
+
+        <!-- Geodesic Formula Footnote -->
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+          <strong class="text-slate-200">ملاحظة الحساب الجيوديسي:</strong> تُحسب المساحات تلقائياً من إحداثيات المضلعات باستخدام نصف قطر الأرض <span dir="ltr" class="text-slate-300">6,378,137 m</span> واعتماد معيار <strong>الدونم العراقي = 2,500 م²</strong>.
+        </div>
+      </div>
+
+      <!-- TAB 2: Search & Scrollable Parcel Directory -->
+      <div id="tabContentParcels" class="hidden flex-1 flex-col overflow-hidden">
+        <div class="p-3 border-b border-slate-800 space-y-2 bg-slate-900/90">
+          <div class="relative">
+            <input id="parcelSearchInput" type="text" placeholder="ابحث باسم القطعة، المحصول، أو الوصف (مثل L013، حنطة، زيتون)..."
+              class="w-full pr-9 pl-8 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition"
+              oninput="renderParcelList()" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer">✕</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select id="parcelCatFilter" onchange="renderParcelList()" class="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+              <option value="all">جميع التصنيفات</option>
+            </select>
+            <span id="parcelResultCount" class="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl shrink-0">61 قطعة</span>
+          </div>
+        </div>
+
+        <div id="parcelListContainer" class="flex-1 overflow-y-auto custom-scroll p-2.5 space-y-1.5"></div>
+      </div>
+
+    </aside>
+
+    <!-- Map Viewport Area -->
+    <main class="relative flex-1 h-full w-full overflow-hidden">
+
+      <!-- Leaflet Map Canvas -->
+      <div id="map" class="w-full h-full z-0"></div>
+
+      <!-- Floating Top Control Bar -->
+      <div class="absolute top-3 right-3 left-3 z-[1000] pointer-events-none flex flex-wrap items-start justify-between gap-2">
+
+        <!-- Right Group: Sidebar Toggle + Basemap Switcher -->
+        <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
+          <!-- Open Sidebar Button -->
+          <button id="openSidebarBtn" onclick="toggleSidebar(true)" class="px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-2 text-xs font-bold transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <span>الطبقات والقطع</span>
+          </button>
+
+          <!-- Basemap Switcher -->
+          <div class="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-xl backdrop-blur-md">
+            <button id="bm-esri" onclick="setBasemap('esri')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition bg-emerald-600 text-white cursor-pointer">أقمار Esri</button>
+            <button id="bm-google" onclick="setBasemap('google')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition text-slate-300 hover:text-white cursor-pointer">Google هجين</button>
+            <button id="bm-osm" onclick="setBasemap('osm')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition text-slate-300 hover:text-white cursor-pointer">خريطة طرق</button>
+          </div>
+        </div>
+
+        <!-- Left Group: GIS Tools (Labels, Opacity, Fit, Measure, Upload) -->
+        <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+
+          <!-- Labels Toggle -->
+          <button id="btnToggleLabels" onclick="toggleLabels()" title="إظهار أو إخفاء أسماء القطع (تظهر تلقائياً عند التقريب ≥ 15)" class="px-2.5 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/50 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+            <span class="hidden sm:inline">التسميات</span>
+          </button>
+
+          <!-- Fill Opacity Slider -->
+          <div class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-2">
+            <span class="text-[11px] font-semibold text-slate-300 whitespace-nowrap">الشفافية <strong id="opacityVal" class="text-emerald-400">45%</strong></span>
+            <input id="opacitySlider" type="range" min="0" max="90" value="45" step="5" oninput="updateOpacity(this.value)" class="w-16 sm:w-20 cursor-pointer" />
+          </div>
+
+          <!-- Fit All Bounds -->
+          <button onclick="fitAllBounds()" title="إعادة توسيط الخريطة على حدود المشروع" class="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            <span class="hidden lg:inline">توسيط الخريطة</span>
+          </button>
+
+          <!-- Measure Tool Toggle -->
+          <button id="btnMeasure" onclick="toggleMeasureMode()" title="قياس المسافة والمساحة بالدونم العراقي" class="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path>
+              <path d="m14.5 12.5 2-2"></path>
+              <path d="m11.5 9.5 2-2"></path>
+              <path d="m8.5 6.5 2-2"></path>
+              <path d="m17.5 15.5 2-2"></path>
+            </svg>
+            <span class="hidden sm:inline">قياس دونم</span>
+          </button>
+
+          <!-- Upload KML/KMZ Button -->
+          <label for="fileUploadInput" title="رفع ملف KML أو KMZ لمعاينته مباشرة" class="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span class="hidden sm:inline">رفع KML/KMZ</span>
+          </label>
+          <input id="fileUploadInput" type="file" accept=".kmz,.kml" class="hidden" onchange="handleFileInput(event)" />
+
+        </div>
+      </div>
+
+      <!-- Measurement Mode Floating HUD -->
+      <div id="measurePanel" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[1020] w-[92vw] max-w-lg bg-slate-900/95 border border-amber-400/50 rounded-2xl shadow-2xl backdrop-blur-xl p-3.5 animate-fade-up">
+        <div class="flex items-center justify-between gap-2 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <h3 class="text-xs font-extrabold text-amber-300">أداة قياس المسافة والمساحة (دونم عراقي)</h3>
+          </div>
+          <button onclick="toggleMeasureMode(false)" class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white transition cursor-pointer">إنهاء ✕</button>
+        </div>
+        <p class="text-[11px] text-slate-300 mb-3">انقر على الخريطة لإضافة نقاط القياس. عند إضافة 3 نقاط أو أكثر تُحسب المساحة المغلقة تلقائياً.</p>
+        <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+          <div class="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400">المسافة / المحيط</div>
+            <div id="measureDistVal" class="text-xs sm:text-sm font-extrabold text-white mt-0.5">0 م</div>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-950/80 border border-emerald-500/30">
+            <div class="text-[10px] text-emerald-300">المساحة (دونم)</div>
+            <div id="measureDonamVal" class="text-xs sm:text-sm font-extrabold text-emerald-400 mt-0.5">0.00 دونم</div>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400">بالمتر المربع</div>
+            <div id="measureM2Val" class="text-xs sm:text-sm font-extrabold text-sky-300 mt-0.5">0 م²</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] text-slate-400">عدد النقاط: <strong id="measurePtsCount" class="text-white">0</strong></span>
+          <div class="flex items-center gap-2">
+            <button onclick="undoMeasurePoint()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition cursor-pointer">تراجع عن نقطة</button>
+            <button onclick="clearMeasure()" class="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-500 text-xs font-bold text-white transition cursor-pointer">مسح القياس</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom-Right Live Coordinates & Zoom Pill -->
+      <div class="hidden sm:flex absolute bottom-4 right-4 z-[990] items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-900/85 border border-slate-700/70 backdrop-blur-md text-[11px] text-slate-300 shadow-lg pointer-events-none">
+        <span dir="ltr" id="cursorCoords">36.39350, 43.50300</span>
+        <span class="text-slate-600">|</span>
+        <span>التقريب: <strong id="zoomLevelVal" class="text-emerald-400">14</strong></span>
+      </div>
+
+      <!-- Drag & Drop File Overlay -->
+      <div id="dropOverlay" class="hidden absolute inset-0 z-[1200] bg-emerald-950/85 backdrop-blur-md border-4 border-dashed border-emerald-400 flex flex-col items-center justify-center text-center p-6 pointer-events-none">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <h2 class="text-xl font-extrabold text-white">أفلت ملف الخريطة هنا (.KMZ أو .KML)</h2>
+        <p class="text-sm text-emerald-200 mt-1">سيتم فك ضغط الملف ومعاينته وحساب مساحاته بالدونم العراقي فوراً داخل المتصفح</p>
+      </div>
+
+      <!-- Toast Notification Area (No alert() used) -->
+      <div id="toastContainer" class="fixed bottom-16 left-4 z-[1300] flex flex-col gap-2 pointer-events-none"></div>
+
+    </main>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. CATEGORY DEFINITIONS & STYLING
+    // =========================================================================
+    const CATEGORIES = {
+      boundary: {
+        label: "حدود المشروع الكلية (All Land)",
+        shortLabel: "الحدود الكلية",
+        fillColor: "#10b981",
+        strokeColor: "#ffffff",
+        dashArray: "8, 6",
+        weight: 2.5,
+        isBoundary: true,
+        order: 1
+      },
+      alfalfa: {
+        label: "جت (New Alfalfa)",
+        shortLabel: "جت",
+        fillColor: "#22c55e",
+        strokeColor: "#86efac",
+        weight: 1.8,
+        order: 2
+      },
+      wheat: {
+        label: "حنطة (Wheat)",
+        shortLabel: "حنطة",
+        fillColor: "#eab308",
+        strokeColor: "#fef08a",
+        weight: 1.8,
+        order: 3
+      },
+      olive: {
+        label: "أشجار زيتون (Olive Trees)",
+        shortLabel: "أشجار زيتون",
+        fillColor: "#166534",
+        strokeColor: "#4ade80",
+        weight: 1.8,
+        order: 4
+      },
+      ready: {
+        label: "أراضي محروثة وجاهزة للزراعة",
+        shortLabel: "جاهزة للزراعة",
+        fillColor: "#f8fafc",
+        strokeColor: "#0ea5e9",
+        weight: 2,
+        order: 5
+      },
+      water: {
+        label: "أحواض المياه (Water Basins)",
+        shortLabel: "أحواض المياه",
+        fillColor: "#0284c7",
+        strokeColor: "#7dd3fc",
+        weight: 2,
+        order: 6
+      },
+      residential: {
+        label: "سكني (الكامب والقرية)",
+        shortLabel: "سكني",
+        fillColor: "#8b5cf6",
+        strokeColor: "#ddd6fe",
+        weight: 2,
+        order: 7
+      },
+      future_olive: {
+        label: "وديان لمستقبل الزيتون (من دلشاد)",
+        shortLabel: "مستقبل الزيتون",
+        fillColor: "#84cc16",
+        strokeColor: "#d9f99d",
+        weight: 1.8,
+        order: 8
+      },
+      rocky: {
+        label: "صخري قابل للتنظيف (من دلشاد)",
+        shortLabel: "صخري يتعالج",
+        fillColor: "#06b6d4",
+        strokeColor: "#a5f3fc",
+        weight: 1.8,
+        order: 9
+      },
+      non_arable: {
+        label: "تلال ووديان وتيكلة غير صالحة للزراعة",
+        shortLabel: "غير صالحة للزراعة",
+        fillColor: "#ef4444",
+        strokeColor: "#fecaca",
+        weight: 1.8,
+        order: 10
+      },
+      imported: {
+        label: "معالم مستوردة أخرى",
+        shortLabel: "مستورد",
+        fillColor: "#f97316",
+        strokeColor: "#fed7aa",
+        weight: 2,
+        order: 11
+      }
+    };
+
+    // =========================================================================
+    // 2. COMPLETE EMBEDDED DATASET (ALL 61 POLYGONS OF HASSAR 16-11-2026)
+    // =========================================================================
+    const DEFAULT_PARCELS = [
+      { id:"all_land", name:"all land (الحدود الكلية)", cat:"boundary", statedArea:2353.5, desc:"أرض مشروع حصار الكلية\nالمساحة : 2353.5 دونم", coords:"43.50170,36.40603 43.50100,36.40548 43.50091,36.40500 43.50051,36.40493 43.50028,36.40435 43.49988,36.40382 43.49947,36.40331 43.49859,36.40307 43.49699,36.40257 43.49605,36.40188 43.49535,36.40116 43.49467,36.40031 43.49419,36.39952 43.49370,36.39889 43.49319,36.39762 43.49277,36.39667 43.49187,36.39586 43.49083,36.39502 43.49067,36.39441 43.49064,36.39367 43.49074,36.39310 43.49069,36.39238 43.49047,36.39130 43.48985,36.39163 43.48927,36.39155 43.48877,36.39115 43.48874,36.39066 43.48890,36.39039 43.48873,36.38973 43.48834,36.38933 43.48865,36.38893 43.48854,36.38803 43.48798,36.38751 43.48727,36.38665 43.48659,36.38605 43.48565,36.38520 43.48478,36.38434 43.48400,36.38333 43.48386,36.38272 43.48405,36.38226 43.48486,36.38179 43.48597,36.38129 43.48677,36.38134 43.48774,36.38119 43.48837,36.38094 43.48887,36.38136 43.48952,36.38166 43.49059,36.38227 43.49137,36.38291 43.49190,36.38330 43.49237,36.38292 43.49287,36.38257 43.49380,36.38245 43.49521,36.38211 43.49630,36.38183 43.49710,36.38117 43.49782,36.38118 43.49808,36.38156 43.49890,36.38176 43.49927,36.38224 43.49986,36.38193 43.49992,36.38150 43.50094,36.38137 43.50130,36.38157 43.50186,36.38125 43.50241,36.38070 43.50329,36.38062 43.50396,36.38091 43.50444,36.38072 43.50482,36.38117 43.50544,36.38164 43.50603,36.38123 43.50711,36.38089 43.50745,36.38149 43.50767,36.38205 43.50867,36.38248 43.50940,36.38249 43.51002,36.38282 43.51029,36.38227 43.51121,36.38215 43.51188,36.38266 43.51249,36.38278 43.51274,36.38327 43.51338,36.38364 43.51419,36.38386 43.51443,36.38481 43.51375,36.38501 43.51391,36.38518 43.51331,36.38577 43.51283,36.38640 43.51270,36.38690 43.51280,36.38746 43.51305,36.38822 43.51345,36.38879 43.51386,36.38928 43.51431,36.38956 43.51461,36.38902 43.51530,36.38914 43.51570,36.38956 43.51689,36.39000 43.51812,36.39039 43.51939,36.39098 43.52066,36.39181 43.52133,36.39230 43.52144,36.39314 43.52169,36.39382 43.52214,36.39438 43.52228,36.39517 43.52262,36.39570 43.52258,36.39653 43.52288,36.39711 43.52270,36.39759 43.52289,36.39798 43.52237,36.39839 43.52185,36.39867 43.52110,36.39851 43.52012,36.39882 43.51920,36.39930 43.51819,36.39981 43.51666,36.40020 43.51563,36.40051 43.51403,36.40125 43.51331,36.40179 43.51243,36.40215 43.51194,36.40267 43.51089,36.40310 43.50918,36.40375 43.50797,36.40404 43.50752,36.40382 43.50697,36.40385 43.50577,36.40428 43.50440,36.40473 43.50381,36.40539 43.50317,36.40605 43.50236,36.40579 43.50195,36.40605 43.50170,36.40603" },
+
+      // ALFALFA (13 parcels)
+      { id:"L001", name:"L001", cat:"alfalfa", statedArea:75.43, desc:"المساحة : 75.43 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.48875,36.38896 43.48869,36.38849 43.48922,36.38847 43.48964,36.38840 43.48961,36.38813 43.49009,36.38798 43.49072,36.38803 43.49197,36.38842 43.49376,36.38854 43.49508,36.38871 43.49615,36.38840 43.49758,36.38816 43.49904,36.38796 43.50027,36.38771 43.50061,36.38769 43.50077,36.38811 43.50047,36.38841 43.49996,36.38855 43.49928,36.38860 43.49948,36.38895 43.49947,36.38910 43.49899,36.38927 43.49881,36.38963 43.49821,36.38971 43.49750,36.38967 43.49734,36.38954 43.49674,36.38976 43.49633,36.38947 43.49593,36.38971 43.49557,36.38942 43.49501,36.38934 43.49374,36.38930 43.49276,36.38933 43.49303,36.38969 43.49268,36.39018 43.49193,36.39067 43.49181,36.39045 43.49163,36.39012 43.49132,36.39015 43.49116,36.39047 43.49123,36.39079 43.49158,36.39074 43.49189,36.39071 43.49149,36.39102 43.49082,36.39105 43.48984,36.39154 43.48932,36.39147 43.48910,36.39083 43.48899,36.39015 43.48861,36.38950 43.48849,36.38919 43.48875,36.38896" },
+      { id:"L002", name:"L002", cat:"alfalfa", statedArea:15, desc:"المساحة : 15 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.49028,36.38792 43.48958,36.38787 43.48948,36.38754 43.48969,36.38732 43.48998,36.38729 43.49091,36.38746 43.49162,36.38765 43.49270,36.38769 43.49461,36.38771 43.49506,36.38786 43.49517,36.38803 43.49481,36.38857 43.49385,36.38850 43.49195,36.38836 43.49096,36.38804 43.49028,36.38792" },
+      { id:"L003", name:"L003", cat:"alfalfa", statedArea:7.4, desc:"المساحة : 7.4 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.48941,36.38559 43.49035,36.38512 43.49097,36.38506 43.49145,36.38523 43.49155,36.38561 43.49115,36.38601 43.49057,36.38648 43.48964,36.38593 43.48941,36.38559" },
+      { id:"L004", name:"L004", cat:"alfalfa", statedArea:23.4, desc:"المساحة : 23.4 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.48975,36.38726 43.49163,36.38558 43.49196,36.38550 43.49251,36.38577 43.49278,36.38580 43.49336,36.38611 43.49392,36.38651 43.49409,36.38690 43.49415,36.38737 43.49390,36.38741 43.49331,36.38753 43.49225,36.38764 43.49136,36.38748 43.49049,36.38737 43.48976,36.38732 43.48975,36.38726" },
+      { id:"L005", name:"L005", cat:"alfalfa", statedArea:14.8, desc:"المساحة : 14.8 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.49516,36.38850 43.49527,36.38827 43.49612,36.38771 43.49688,36.38737 43.49789,36.38715 43.49871,36.38726 43.49946,36.38728 43.50006,36.38711 43.50065,36.38724 43.50073,36.38760 43.49946,36.38783 43.49809,36.38808 43.49657,36.38829 43.49522,36.38860 43.49516,36.38850" },
+      { id:"L006", name:"L006", cat:"alfalfa", statedArea:4.8, desc:"المساحة : 4.8 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.49610,36.39317 43.49660,36.39306 43.49753,36.39262 43.49774,36.39257 43.49795,36.39267 43.49784,36.39301 43.49751,36.39339 43.49701,36.39367 43.49646,36.39377 43.49614,36.39349 43.49610,36.39317" },
+      { id:"L007", name:"L007", cat:"alfalfa", statedArea:39.25, desc:"المساحة : 39.25 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.49782,36.39145 43.49715,36.39161 43.49649,36.39207 43.49566,36.39250 43.49464,36.39275 43.49367,36.39261 43.49288,36.39253 43.49222,36.39185 43.49219,36.39166 43.49239,36.39132 43.49261,36.39111 43.49315,36.39117 43.49374,36.39081 43.49452,36.39038 43.49509,36.39035 43.49538,36.39079 43.49594,36.39065 43.49663,36.39057 43.49680,36.39033 43.49719,36.39025 43.49806,36.39029 43.49840,36.39046 43.49840,36.39118 43.49822,36.39148 43.49782,36.39145" },
+      { id:"L008", name:"L008", cat:"alfalfa", statedArea:20, desc:"المساحة : 20 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.49079,36.39480 43.49068,36.39465 43.49063,36.39384 43.49071,36.39323 43.49113,36.39315 43.49180,36.39296 43.49261,36.39282 43.49321,36.39275 43.49371,36.39304 43.49433,36.39359 43.49490,36.39331 43.49516,36.39333 43.49534,36.39362 43.49513,36.39378 43.49478,36.39375 43.49438,36.39397 43.49410,36.39406 43.49375,36.39408 43.49332,36.39439 43.49287,36.39439 43.49250,36.39406 43.49212,36.39411 43.49132,36.39437 43.49109,36.39449 43.49089,36.39479 43.49079,36.39480" },
+      { id:"L009_a", name:"L009 (شمال غرب)", cat:"alfalfa", statedArea:59, desc:"المساحة : 59 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة\n(ملاحظة: الاسم L009 مكرر في الملف)", coords:"43.50155,36.39873 43.50079,36.39898 43.49951,36.39944 43.49868,36.39974 43.49852,36.39966 43.49821,36.39915 43.49790,36.39852 43.49747,36.39820 43.49669,36.39830 43.49599,36.39869 43.49536,36.39865 43.49441,36.39892 43.49408,36.39929 43.49387,36.39923 43.49336,36.39805 43.49298,36.39697 43.49248,36.39636 43.49143,36.39550 43.49113,36.39497 43.49165,36.39449 43.49233,36.39445 43.49344,36.39456 43.49416,36.39432 43.49484,36.39395 43.49557,36.39378 43.49618,36.39376 43.49675,36.39389 43.49758,36.39355 43.49784,36.39394 43.49732,36.39465 43.49704,36.39560 43.49715,36.39645 43.49743,36.39709 43.49814,36.39780 43.49892,36.39824 43.50006,36.39852 43.50099,36.39851 43.50142,36.39846 43.50157,36.39870 43.50155,36.39873" },
+      { id:"L009_b", name:"L009 (كاع حسوني)", cat:"alfalfa", statedArea:19.25, desc:"المساحة : 19.25 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة\nاسمه كاع حسوني\n(ملاحظة: الاسم L009 مكرر في الملف)", coords:"43.51824,36.39853 43.51805,36.39779 43.51520,36.39812 43.51513,36.39792 43.51516,36.39758 43.51569,36.39756 43.51649,36.39742 43.51748,36.39707 43.51807,36.39697 43.51926,36.39713 43.51999,36.39721 43.52076,36.39748 43.52076,36.39758 43.52020,36.39793 43.51946,36.39845 43.51887,36.39871 43.51832,36.39888 43.51820,36.39878 43.51875,36.39853 43.51923,36.39817 43.51880,36.39828 43.51824,36.39853" },
+      { id:"L010", name:"L010", cat:"alfalfa", statedArea:43.75, desc:"المساحة : 43.75 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.48954,36.38740 43.48931,36.38756 43.48839,36.38773 43.48797,36.38740 43.48702,36.38630 43.48641,36.38584 43.48516,36.38467 43.48452,36.38397 43.48477,36.38380 43.48533,36.38371 43.48597,36.38382 43.48620,36.38402 43.48666,36.38383 43.48750,36.38381 43.48950,36.38588 43.49057,36.38646 43.48954,36.38740" },
+      { id:"L011", name:"L011", cat:"alfalfa", statedArea:48.7, desc:"المساحة : 48.7 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.50657,36.39130 43.50649,36.39096 43.50651,36.39063 43.50678,36.39004 43.50729,36.38951 43.50797,36.38919 43.50884,36.38910 43.50979,36.38933 43.51039,36.38974 43.51082,36.39037 43.51092,36.39097 43.51079,36.39147 43.51039,36.39200 43.50978,36.39241 43.50903,36.39263 43.50820,36.39261 43.50742,36.39235 43.50677,36.39170 43.50657,36.39130" },
+      { id:"L012", name:"L012", cat:"alfalfa", statedArea:50.72, desc:"المساحة : 50.72 دونم\nالمنتوج الحالي : جت\nتاريخ الزراعة: السنة الاولى\nالمنتوج اللاحق: المقترح حنطة", coords:"43.51706,36.39618 43.51678,36.39566 43.51669,36.39523 43.51691,36.39445 43.51758,36.39375 43.51840,36.39346 43.51931,36.39341 43.52029,36.39372 43.52099,36.39435 43.52116,36.39492 43.52116,36.39564 43.52068,36.39637 43.51996,36.39681 43.51920,36.39703 43.51823,36.39691 43.51758,36.39665 43.51706,36.39618" },
+
+      // WHEAT (14 parcels)
+      { id:"L013", name:"L013", cat:"wheat", statedArea:120, desc:"المساحة : 120 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50027,36.39847 43.49925,36.39829 43.49816,36.39773 43.49738,36.39686 43.49709,36.39582 43.49727,36.39470 43.49812,36.39368 43.49917,36.39307 43.50051,36.39290 43.50186,36.39312 43.50292,36.39366 43.50379,36.39472 43.50395,36.39578 43.50366,36.39690 43.50307,36.39753 43.50185,36.39824 43.50109,36.39846 43.50027,36.39847" },
+      { id:"L014", name:"L014", cat:"wheat", statedArea:19, desc:"المساحة : 19 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.49155,36.38532 43.49107,36.38508 43.49013,36.38523 43.48930,36.38563 43.48752,36.38377 43.48829,36.38371 43.48896,36.38358 43.48910,36.38387 43.48987,36.38389 43.49026,36.38384 43.49096,36.38401 43.49115,36.38443 43.49165,36.38445 43.49169,36.38505 43.49155,36.38532" },
+      { id:"L015", name:"L015", cat:"wheat", statedArea:22, desc:"المساحة : 22 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.49992,36.39137 43.49994,36.39165 43.49980,36.39210 43.50053,36.39229 43.50027,36.39243 43.49955,36.39249 43.49871,36.39275 43.49828,36.39347 43.49803,36.39359 43.49809,36.39301 43.49823,36.39262 43.49761,36.39233 43.49669,36.39282 43.49601,36.39280 43.49612,36.39319 43.49716,36.39277 43.49776,36.39255 43.49797,36.39266 43.49751,36.39342 43.49669,36.39379 43.49595,36.39351 43.49573,36.39334 43.49573,36.39282 43.49504,36.39294 43.49448,36.39324 43.49369,36.39275 43.49463,36.39289 43.49597,36.39252 43.49742,36.39178 43.49872,36.39166 43.49977,36.39124 43.49992,36.39137" },
+      { id:"L016", name:"L016", cat:"wheat", statedArea:6, desc:"المساحة : 6 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50068,36.38998 43.50044,36.38981 43.50032,36.38940 43.50047,36.38908 43.50106,36.38901 43.50182,36.38880 43.50259,36.38851 43.50273,36.38865 43.50273,36.38904 43.50210,36.38929 43.50117,36.38970 43.50068,36.38998" },
+      { id:"L017", name:"L017", cat:"wheat", statedArea:48, desc:"المساحة : 48 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.49200,36.38336 43.49223,36.38302 43.49273,36.38286 43.49320,36.38284 43.49367,36.38300 43.49338,36.38412 43.49391,36.38476 43.49462,36.38526 43.49526,36.38546 43.49696,36.38535 43.49886,36.38553 43.50110,36.38585 43.50168,36.38577 43.50212,36.38609 43.50199,36.38640 43.50082,36.38635 43.50120,36.38694 43.50075,36.38722 43.49895,36.38721 43.49743,36.38718 43.49589,36.38781 43.49522,36.38831 43.49507,36.38823 43.49587,36.38747 43.49740,36.38671 43.49660,36.38624 43.49517,36.38592 43.49381,36.38564 43.49294,36.38438 43.49290,36.38399 43.49200,36.38336" },
+      { id:"L018", name:"L018", cat:"wheat", statedArea:52, desc:"المساحة : 52 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50244,36.39279 43.50247,36.39231 43.50262,36.39178 43.50308,36.39124 43.50364,36.39088 43.50454,36.39073 43.50608,36.39056 43.50620,36.39123 43.50677,36.39164 43.50753,36.39240 43.50686,36.39275 43.50631,36.39371 43.50524,36.39419 43.50435,36.39427 43.50365,36.39409 43.50304,36.39373 43.50263,36.39328 43.50244,36.39279" },
+      { id:"L019", name:"L019", cat:"wheat", statedArea:42, desc:"المساحة : 42 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50721,36.39547 43.50749,36.39494 43.50776,36.39450 43.50867,36.39423 43.50912,36.39418 43.50977,36.39446 43.51011,36.39438 43.51080,36.39542 43.51091,36.39570 43.51089,36.39613 43.51110,36.39617 43.51071,36.39692 43.51016,36.39735 43.50913,36.39763 43.50787,36.39739 43.50706,36.39664 43.50689,36.39614 43.50721,36.39547" },
+      { id:"L020", name:"L020", cat:"wheat", statedArea:9, desc:"المساحة : 9 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.51491,36.39326 43.51480,36.39316 43.51488,36.39285 43.51437,36.39254 43.51381,36.39184 43.51379,36.39173 43.51406,36.39162 43.51477,36.39180 43.51560,36.39202 43.51599,36.39202 43.51623,36.39231 43.51589,36.39271 43.51586,36.39332 43.51562,36.39339 43.51523,36.39323 43.51553,36.39297 43.51556,36.39280 43.51529,36.39280 43.51549,36.39293 43.51507,36.39326 43.51491,36.39326" },
+      { id:"L021", name:"L021", cat:"wheat", statedArea:13.5, desc:"المساحة : 13.5 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.51568,36.39181 43.51492,36.39168 43.51416,36.39149 43.51367,36.39149 43.51300,36.39108 43.51306,36.39087 43.51370,36.39081 43.51372,36.39052 43.51412,36.39026 43.51474,36.38985 43.51508,36.38994 43.51524,36.39021 43.51550,36.39007 43.51584,36.39025 43.51606,36.39055 43.51550,36.39104 43.51569,36.39162 43.51568,36.39181" },
+      { id:"L022", name:"L022", cat:"wheat", statedArea:5, desc:"المساحة : 5 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.51038,36.38814 43.51018,36.38851 43.50983,36.38869 43.50890,36.38827 43.50842,36.38837 43.50803,36.38803 43.50808,36.38781 43.50833,36.38774 43.50911,36.38786 43.51040,36.38805 43.51038,36.38814" },
+      { id:"L023", name:"L023", cat:"wheat", statedArea:3.5, desc:"المساحة : 3.5 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.51066,36.38821 43.51126,36.38885 43.51195,36.38937 43.51226,36.38971 43.51209,36.38984 43.51144,36.38958 43.51051,36.38875 43.51055,36.38828 43.51066,36.38821" },
+      { id:"L024", name:"L024", cat:"wheat", statedArea:2, desc:"المساحة : 2 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.51117,36.38857 43.51087,36.38836 43.51042,36.38801 43.50984,36.38791 43.51024,36.38760 43.51087,36.38758 43.51109,36.38781 43.51103,36.38812 43.51137,36.38837 43.51137,36.38849 43.51117,36.38857" },
+      { id:"L025", name:"L025", cat:"wheat", statedArea:9.5, desc:"المساحة : 9.5 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50640,36.39010 43.50621,36.38863 43.50786,36.38781 43.50816,36.38847 43.50812,36.38892 43.50718,36.38945 43.50659,36.39011 43.50640,36.39010" },
+      { id:"L026", name:"L026", cat:"wheat", statedArea:72, desc:"المساحة : 72 دونم\nالمحصول الحالي : حنطة\nنوع السقي : مرشة محورية", coords:"43.50664,36.39895 43.50749,36.39839 43.50842,36.39817 43.50930,36.39817 43.51027,36.39856 43.51091,36.39900 43.51133,36.39976 43.51141,36.40055 43.51117,36.40122 43.51074,36.40174 43.50977,36.40228 43.50874,36.40252 43.50818,36.40248 43.50740,36.40221 43.50686,36.40190 43.50630,36.40134 43.50608,36.40076 43.50604,36.40002 43.50625,36.39952 43.50664,36.39895" },
+
+      // OLIVE TREES (8 parcels)
+      { id:"L027", name:"L027", cat:"olive", statedArea:59, desc:"المساحة : 59 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.49981,36.40184 43.49965,36.40206 43.49925,36.40208 43.49925,36.40248 43.49972,36.40334 43.49930,36.40316 43.49820,36.40287 43.49711,36.40256 43.49608,36.40188 43.49527,36.40099 43.49460,36.40002 43.49421,36.39951 43.49452,36.39924 43.49519,36.39903 43.49551,36.39882 43.49610,36.39876 43.49682,36.39837 43.49745,36.39833 43.49792,36.39887 43.49822,36.39948 43.49850,36.39987 43.49894,36.39979 43.49877,36.40066 43.49947,36.40130 43.49981,36.40184" },
+      { id:"L028", name:"L028", cat:"olive", statedArea:8, desc:"المساحة : 8 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.50152,36.40254 43.50168,36.40313 43.50186,36.40354 43.50260,36.40395 43.50319,36.40435 43.50250,36.40477 43.50153,36.40440 43.50110,36.40416 43.50099,36.40389 43.50123,36.40293 43.50135,36.40248 43.50152,36.40254" },
+      { id:"L029", name:"L029", cat:"olive", statedArea:null, desc:"المساحة : غير مذكورة في الملف (تُحسب تلقائياً)\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.50246,36.40115 43.50334,36.40151 43.50417,36.40211 43.50407,36.40242 43.50424,36.40300 43.50410,36.40340 43.50363,36.40379 43.50338,36.40387 43.50274,36.40354 43.50198,36.40350 43.50180,36.40302 43.50178,36.40255 43.50152,36.40212 43.50190,36.40150 43.50218,36.40100 43.50246,36.40115" },
+      { id:"L030", name:"L030", cat:"olive", statedArea:27, desc:"المساحة : 27 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط (تقطير)", coords:"43.50586,36.39740 43.50509,36.39800 43.50439,36.39861 43.50348,36.39952 43.50223,36.40060 43.50134,36.39998 43.50070,36.39972 43.50034,36.39921 43.50150,36.39885 43.50253,36.39834 43.50414,36.39759 43.50547,36.39708 43.50576,36.39719 43.50586,36.39740" },
+      { id:"L031", name:"L031", cat:"olive", statedArea:34.7, desc:"المساحة : 34.7 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.50603,36.39753 43.50634,36.39810 43.50605,36.39882 43.50584,36.40003 43.50541,36.40136 43.50517,36.40198 43.50466,36.40244 43.50449,36.40233 43.50444,36.40206 43.50388,36.40176 43.50327,36.40121 43.50250,36.40073 43.50285,36.40034 43.50358,36.39973 43.50445,36.39876 43.50544,36.39783 43.50594,36.39750 43.50603,36.39753" },
+      { id:"L032", name:"L032", cat:"olive", statedArea:20.5, desc:"المساحة : 20.5 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.50123,36.40218 43.50060,36.40217 43.49985,36.40184 43.49949,36.40125 43.49882,36.40061 43.49903,36.39987 43.49933,36.39965 43.49960,36.39997 43.50000,36.39996 43.50032,36.39963 43.50096,36.39997 43.50200,36.40074 43.50206,36.40087 43.50150,36.40189 43.50123,36.40218" },
+      { id:"L033", name:"L033", cat:"olive", statedArea:6, desc:"المساحة : 6 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط - تقطير", coords:"43.50607,36.39682 43.50585,36.39635 43.50600,36.39560 43.50624,36.39497 43.50662,36.39460 43.50722,36.39440 43.50749,36.39443 43.50709,36.39482 43.50665,36.39523 43.50659,36.39592 43.50649,36.39653 43.50622,36.39692 43.50607,36.39682" },
+      { id:"L034", name:"L034", cat:"olive", statedArea:15, desc:"المساحة : 15 دونم\nالمنتوج : أشجار زيتون\nنوع الري : تنقيط / تقطير", coords:"43.50130,36.40244 43.50101,36.40337 43.50092,36.40389 43.50138,36.40440 43.50241,36.40496 43.50195,36.40532 43.50123,36.40508 43.50086,36.40470 43.50054,36.40485 43.50027,36.40419 43.49980,36.40337 43.49933,36.40260 43.49932,36.40205 43.49993,36.40210 43.50106,36.40232 43.50130,36.40244" },
+
+      // READY LAND (10 parcels)
+      { id:"L035", name:"L035", cat:"ready", statedArea:27, desc:"المساحة : 27 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.50307,36.39108 43.50259,36.39165 43.50238,36.39235 43.50239,36.39281 43.50173,36.39289 43.50129,36.39246 43.50070,36.39242 43.49979,36.39116 43.50045,36.39048 43.50105,36.38992 43.50205,36.38945 43.50244,36.38955 43.50282,36.39040 43.50290,36.39091 43.50381,36.39081 43.50307,36.39108" },
+      { id:"L036", name:"L036", cat:"ready", statedArea:37, desc:"المساحة : 37 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.51135,36.39621 43.51157,36.39579 43.51153,36.39500 43.51180,36.39499 43.51227,36.39558 43.51263,36.39570 43.51328,36.39562 43.51331,36.39611 43.51371,36.39625 43.51461,36.39569 43.51534,36.39561 43.51639,36.39545 43.51670,36.39572 43.51694,36.39619 43.51597,36.39660 43.51556,36.39707 43.51513,36.39749 43.51408,36.39735 43.51309,36.39723 43.51292,36.39778 43.51228,36.39773 43.51194,36.39739 43.51096,36.39759 43.51053,36.39712 43.51096,36.39655 43.51110,36.39617 43.51135,36.39621" },
+      { id:"L037", name:"L037", cat:"ready", statedArea:8.5, desc:"المساحة : 8.5 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.50696,36.39640 43.50730,36.39697 43.50786,36.39738 43.50876,36.39763 43.50956,36.39758 43.51041,36.39722 43.51067,36.39764 43.50940,36.39795 43.50841,36.39769 43.50744,36.39773 43.50620,36.39759 43.50622,36.39726 43.50688,36.39616 43.50696,36.39640" },
+      { id:"L038", name:"L038", cat:"ready", statedArea:29, desc:"المساحة : 29 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة", coords:"43.51023,36.39221 43.51078,36.39145 43.51086,36.39107 43.51150,36.39160 43.51247,36.39211 43.51323,36.39204 43.51373,36.39182 43.51417,36.39238 43.51490,36.39291 43.51459,36.39311 43.51363,36.39320 43.51394,36.39344 43.51314,36.39374 43.51266,36.39377 43.51221,36.39407 43.51161,36.39433 43.51110,36.39413 43.51168,36.39380 43.51163,36.39343 43.51078,36.39326 43.51089,36.39314 43.51023,36.39312 43.51018,36.39251 43.51023,36.39221" },
+      { id:"L039", name:"L039", cat:"ready", statedArea:17, desc:"المساحة : 17 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.51911,36.39323 43.51841,36.39295 43.51729,36.39247 43.51706,36.39206 43.51632,36.39140 43.51611,36.39096 43.51661,36.39092 43.51671,36.39080 43.51632,36.39038 43.51688,36.39049 43.51766,36.39101 43.51855,36.39171 43.51914,36.39222 43.51984,36.39251 43.51990,36.39271 43.51961,36.39305 43.51911,36.39323" },
+      { id:"L040", name:"L040", cat:"ready", statedArea:5.5, desc:"المساحة : 5.5 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.52080,36.39624 43.52106,36.39571 43.52109,36.39497 43.52098,36.39459 43.52137,36.39456 43.52173,36.39492 43.52178,36.39534 43.52170,36.39593 43.52113,36.39688 43.52084,36.39685 43.52078,36.39668 43.52080,36.39624" },
+      { id:"L041", name:"L041", cat:"ready", statedArea:18.5, desc:"المساحة : 18.5 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.51802,36.39779 43.51822,36.39850 43.51750,36.39869 43.51701,36.39915 43.51632,36.39935 43.51522,36.39954 43.51486,36.39891 43.51524,36.39896 43.51568,36.39858 43.51555,36.39849 43.51522,36.39869 43.51475,36.39836 43.51420,36.39833 43.51370,36.39798 43.51362,36.39778 43.51399,36.39743 43.51512,36.39756 43.51512,36.39808 43.51554,36.39815 43.51672,36.39792 43.51802,36.39779" },
+      { id:"L042", name:"L042", cat:"ready", statedArea:6, desc:"المساحة : 6 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.51133,36.39963 43.51114,36.39930 43.51043,36.39863 43.50960,36.39826 43.50896,36.39813 43.50959,36.39803 43.51071,36.39773 43.51094,36.39782 43.51155,36.39886 43.51135,36.39939 43.51133,36.39963" },
+      { id:"L043", name:"L043", cat:"ready", statedArea:4, desc:"المساحة : 4 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.50819,36.39816 43.50753,36.39837 43.50678,36.39884 43.50611,36.39983 43.50609,36.39900 43.50655,36.39811 43.50740,36.39809 43.50819,36.39816" },
+      { id:"L044", name:"L044", cat:"ready", statedArea:7.5, desc:"المساحة : 7.5 دونم\nالمنتوج الحالي : الأرض محروثة وجاهزة للزراعة\nالمنتوج السابق : جت", coords:"43.51879,36.39337 43.51813,36.39354 43.51725,36.39399 43.51718,36.39377 43.51724,36.39326 43.51671,36.39310 43.51637,36.39285 43.51650,36.39225 43.51732,36.39256 43.51829,36.39292 43.51879,36.39324 43.51879,36.39337" },
+
+      // RESIDENTIAL (2)
+      { id:"camp", name:"main building (الكامب)", cat:"residential", statedArea:null, desc:"المبنى الرئيسي - الكامب (main building)", coords:"43.50416,36.39693 43.50454,36.39705 43.50407,36.39729 43.50342,36.39768 43.50289,36.39802 43.50244,36.39815 43.50194,36.39854 43.50163,36.39867 43.50143,36.39842 43.50213,36.39815 43.50277,36.39779 43.50341,36.39727 43.50398,36.39695 43.50416,36.39693" },
+      { id:"village", name:"the Village Area (القرية)", cat:"residential", statedArea:null, desc:"منطقة القرية (the Village Area)", coords:"43.50290,36.39086 43.50282,36.39024 43.50243,36.38929 43.50280,36.38901 43.50269,36.38852 43.50170,36.38708 43.50285,36.38617 43.50383,36.38524 43.50491,36.38515 43.50576,36.38542 43.50741,36.38496 43.50786,36.38547 43.50841,36.38558 43.50946,36.38534 43.51025,36.38561 43.51029,36.38642 43.51003,36.38700 43.50942,36.38734 43.50860,36.38733 43.50783,36.38762 43.50734,36.38816 43.50617,36.38872 43.50631,36.39054 43.50290,36.39086" },
+
+      // WATER BASINS (3)
+      { id:"basin1", name:"basin 1 (الحوض الأول)", cat:"water", statedArea:null, desc:"الحوض الأول للمياه", coords:"43.50569,36.39690 43.50541,36.39686 43.50547,36.39658 43.50570,36.39657 43.50579,36.39663 43.50572,36.39687 43.50569,36.39690" },
+      { id:"basin2", name:"basin 2 (الحوض الثاني)", cat:"water", statedArea:null, desc:"الحوض الثاني للمياه", coords:"43.49965,36.39983 43.49950,36.39957 43.49980,36.39943 43.49995,36.39966 43.49965,36.39983" },
+      { id:"basin3", name:"basin 3 (الحوض الثالث)", cat:"water", statedArea:null, desc:"الحوض الثالث للمياه", coords:"43.48922,36.38835 43.48917,36.38814 43.48946,36.38810 43.48951,36.38831 43.48922,36.38835" },
+
+      // OTHER (non-arable topography) (2)
+      { id:"valley", name:"valley (وادي)", cat:"non_arable", statedArea:null, desc:"الطبيعة الطوبوغرافية : وادي\nالملاحظات : لا يصلح للزراعة", coords:"43.49121,36.38439 43.49121,36.38420 43.49069,36.38379 43.49128,36.38365 43.49054,36.38368 43.49067,36.38317 43.49148,36.38336 43.49208,36.38341 43.49289,36.38403 43.49320,36.38482 43.49375,36.38566 43.49460,36.38593 43.49565,36.38616 43.49660,36.38628 43.49719,36.38669 43.49649,36.38684 43.49565,36.38726 43.49517,36.38797 43.49490,36.38745 43.49430,36.38720 43.49373,36.38633 43.49279,36.38577 43.49208,36.38541 43.49158,36.38549 43.49173,36.38504 43.49167,36.38444 43.49121,36.38439" },
+      { id:"hill", name:"Hill (تل)", cat:"non_arable", statedArea:null, desc:"الطبيعة الطوبوغرافية : تل\nالملاحظات : لا يصلح للزراعة", coords:"43.49123,36.39078 43.49115,36.39050 43.49131,36.39015 43.49162,36.39012 43.49182,36.39045 43.49159,36.39074 43.49123,36.39078" },
+
+      // FROM DILSHAD (8)
+      { id:"dilshad_rock1", name:"قطعة 4 (صخري شرق)", cat:"rocky", statedArea:null, desc:"من دلشاد - صخري قابل للتنظيف", coords:"43.52093,36.39430 43.52054,36.39383 43.51996,36.39350 43.51931,36.39335 43.51883,36.39326 43.51953,36.39315 43.52023,36.39286 43.52054,36.39285 43.52070,36.39329 43.52077,36.39376 43.52104,36.39424 43.52093,36.39430" },
+      { id:"dilshad_rock2", name:"قطعة 4 (صخري وسط)", cat:"rocky", statedArea:null, desc:"من دلشاد - صخري قابل للتنظيف", coords:"43.51152,36.39765 43.51188,36.39764 43.51223,36.39791 43.51280,36.39806 43.51220,36.39827 43.51152,36.39884 43.51103,36.39808 43.51090,36.39778 43.51152,36.39765" },
+      { id:"dilshad_tekla7", name:"تيكلة 7", cat:"non_arable", statedArea:null, desc:"من دلشاد - تيكلة ما ينزرع", coords:"43.51519,36.39750 43.51565,36.39696 43.51602,36.39656 43.51701,36.39620 43.51743,36.39662 43.51789,36.39687 43.51712,36.39718 43.51628,36.39742 43.51551,36.39758 43.51519,36.39750" },
+      { id:"dilshad_tekla30", name:"تيكلة 30", cat:"non_arable", statedArea:null, desc:"من دلشاد - تيكلة ما ينزرع", coords:"43.51396,36.39160 43.51345,36.39194 43.51254,36.39211 43.51171,36.39176 43.51094,36.39107 43.51090,36.39052 43.51061,36.38987 43.50956,36.38920 43.50830,36.38897 43.50815,36.38836 43.50889,36.38837 43.51000,36.38873 43.51041,36.38810 43.51062,36.38819 43.51051,36.38878 43.51109,36.38938 43.51223,36.38983 43.51223,36.38953 43.51363,36.39027 43.51299,36.39075 43.51293,36.39107 43.51396,36.39160" },
+      { id:"dilshad_wadi_ol", name:"WADI (مستقبل زيتون)", cat:"future_olive", statedArea:null, desc:"من دلشاد - وادي: راح يصير زيتون مستقبلاً هالموسم أو الربيع", coords:"43.49232,36.38767 43.49361,36.38750 43.49414,36.38734 43.49409,36.38674 43.49462,36.38741 43.49489,36.38742 43.49519,36.38790 43.49565,36.38728 43.49654,36.38685 43.49729,36.38669 43.49646,36.38728 43.49565,36.38768 43.49511,36.38809 43.49429,36.38769 43.49232,36.38767" },
+      { id:"dilshad_hill_no", name:"تل ووديان (لا يُزرع)", cat:"non_arable", statedArea:null, desc:"من دلشاد - تل ووديان ما ينزرع", coords:"43.50495,36.38525 43.50601,36.38450 43.50669,36.38384 43.50761,36.38313 43.50942,36.38274 43.51084,36.38245 43.51241,36.38280 43.51348,36.38357 43.51442,36.38442 43.51448,36.38473 43.51318,36.38542 43.51277,36.38586 43.51155,36.38593 43.51035,36.38559 43.50920,36.38526 43.50842,36.38552 43.50742,36.38499 43.50577,36.38535 43.50495,36.38525" },
+      { id:"dilshad_58", name:"قطعة 58 (مستقبل زيتون)", cat:"future_olive", statedArea:null, desc:"من دلشاد - وادي بالمستقبل زيتون", coords:"43.48448,36.38393 43.48395,36.38299 43.48389,36.38246 43.48463,36.38194 43.48558,36.38142 43.48679,36.38143 43.48842,36.38101 43.48896,36.38159 43.48997,36.38191 43.49110,36.38268 43.49129,36.38322 43.49067,36.38314 43.49044,36.38376 43.48913,36.38384 43.48905,36.38355 43.48724,36.38379 43.48624,36.38392 43.48540,36.38364 43.48448,36.38393" },
+      { id:"dilshad_45", name:"قطعة 45 (مستقبل زيتون)", cat:"future_olive", statedArea:null, desc:"من دلشاد - وادي مستقبل زيتون", coords:"43.49071,36.39260 43.49048,36.39127 43.49162,36.39109 43.49289,36.39003 43.49332,36.38950 43.49512,36.38937 43.49586,36.38975 43.49682,36.38979 43.49874,36.38969 43.49954,36.38908 43.49944,36.38860 43.50045,36.38850 43.50192,36.38760 43.50224,36.38859 43.50035,36.38903 43.50023,36.38989 43.49950,36.39049 43.49767,36.39019 43.49618,36.39061 43.49541,36.39072 43.49503,36.39016 43.49413,36.39041 43.49271,36.39112 43.49212,36.39164 43.49189,36.39217 43.49080,36.39239 43.49071,36.39260" }
+    ];
+
+    // =========================================================================
+    // 3. GEODESIC & GEOMETRY HELPERS
+    // =========================================================================
+    const EARTH_RADIUS_M = 6378137;
+    const IRAQI_DONAM_M2 = 2500;
+
+    /**
+     * Converts "lng,lat[,alt] lng,lat[,alt] ..." into Leaflet [[lat, lng], ...]
+     */
+    function parseCoords(str) {
+      if (!str || typeof str !== 'string') return [];
+      const tokens = str.trim().split(/\s+/);
+      const pts = [];
+      for (const tok of tokens) {
+        const parts = tok.split(',');
+        if (parts.length >= 2) {
+          const lng = parseFloat(parts[0]);
+          const lat = parseFloat(parts[1]);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            pts.push([lat, lng]);
+          }
+        }
+      }
+      return pts;
+    }
+
+    /**
+     * Accurate Spherical Polygon Geodesic Area (Chamberlain & Duquette formula)
+     * @param {Array<[number, number]>} latlngs - Array of [lat, lng]
+     * @returns {number} Area in square meters (m²)
+     */
+    function computeGeodesicAreaM2(latlngs) {
+      if (!latlngs || latlngs.length < 3) return 0;
+      const d2r = Math.PI / 180;
+      let total = 0;
+      const n = latlngs.length;
+      for (let i = 0; i < n; i++) {
+        const p1 = latlngs[i];
+        const p2 = latlngs[(i + 1) % n];
+        const lon1 = p1[1] * d2r;
+        const lat1 = p1[0] * d2r;
+        const lon2 = p2[1] * d2r;
+        const lat2 = p2[0] * d2r;
+        total += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      return Math.abs((total * EARTH_RADIUS_M * EARTH_RADIUS_M) / 2);
+    }
+
+    /**
+     * Haversine distance between two [lat, lng] points in meters
+     */
+    function computeDistanceM(p1, p2) {
+      const d2r = Math.PI / 180;
+      const dLat = (p2[0] - p1[0]) * d2r;
+      const dLon = (p2[1] - p1[1]) * d2r;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(p1[0] * d2r) * Math.cos(p2[0] * d2r) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    /**
+     * Computes polygon centroid (area-weighted, falls back to average vertex)
+     */
+    function computeCentroid(latlngs) {
+      if (!latlngs || latlngs.length === 0) return [36.393, 43.503];
+      let area = 0, cx = 0, cy = 0;
+      const n = latlngs.length;
+      for (let i = 0; i < n; i++) {
+        const [y0, x0] = latlngs[i];
+        const [y1, x1] = latlngs[(i + 1) % n];
+        const cross = x0 * y1 - x1 * y0;
+        area += cross;
+        cx += (x0 + x1) * cross;
+        cy += (y0 + y1) * cross;
+      }
+      if (Math.abs(area) < 1e-12) {
+        let sumLat = 0, sumLng = 0;
+        latlngs.forEach(p => { sumLat += p[0]; sumLng += p[1]; });
+        return [sumLat / n, sumLng / n];
+      }
+      area *= 0.5;
+      return [cy / (6 * area), cx / (6 * area)];
+    }
+
+    function fmtNum(num, decimals = 2) {
+      if (num === null || num === undefined || isNaN(num)) return "--";
+      return Number(num).toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // =========================================================================
+    // 4. APPLICATION STATE & MAP INITIALIZATION
+    // =========================================================================
+    let map;
+    let basemaps = {};
+    let activeBasemapKey = 'esri';
+    let currentParcels = [];
+    let categoryVisibility = {};
+    let categoryLayers = {};
+    let parcelLayerMap = new Map(); // id -> { parcel, polygon, labelTooltip }
+    let labelsEnabled = true;
+    let currentOpacity = 0.45;
+    let sidebarOpen = window.innerWidth >= 768;
+    let activeHighlightId = null;
+
+    // Measurement Tool State
+    let measureActive = false;
+    let measurePoints = [];
+    let measureLayerGroup = null;
+
+    function initMap() {
+      map = L.map('map', {
+        center: [36.3935, 43.503],
+        zoom: 14,
+        zoomControl: false,
+        preferCanvas: false
+      });
+
+      // Custom panes so outer boundary ALWAYS sits beneath inner plots
+      map.createPane('boundaryPane');
+      map.getPane('boundaryPane').style.zIndex = 350;
+
+      map.createPane('parcelsPane');
+      map.getPane('parcelsPane').style.zIndex = 420;
+
+      map.createPane('measurePane');
+      map.getPane('measurePane').style.zIndex = 650;
+
+      // Zoom control at bottom-left (away from RTL sidebar)
+      L.control.zoom({ position: 'bottomleft' }).addTo(map);
+      L.control.scale({ position: 'bottomleft', metric: true, imperial: false }).addTo(map);
+
+      // Basemap Layers
+      basemaps = {
+        esri: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19,
+          attribution: 'Esri World Imagery'
+        }),
+        google: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          attribution: 'Google Satellite Hybrid'
+        }),
+        osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap'
+        })
+      };
+
+      basemaps.esri.addTo(map);
+
+      // Measurement overlay group
+      measureLayerGroup = L.layerGroup().addTo(map);
+
+      // Map Events
+      map.on('mousemove', (e) => {
+        const el = document.getElementById('cursorCoords');
+        if (el) el.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+      });
+
+      map.on('zoomend', () => {
+        const z = map.getZoom();
+        const el = document.getElementById('zoomLevelVal');
+        if (el) el.textContent = z;
+        refreshLabelsVisibility();
+      });
+
+      map.on('click', (e) => {
+        if (measureActive) {
+          addMeasurePoint(e.latlng);
+        }
+      });
+
+      // Initialize responsive sidebar state
+      toggleSidebar(sidebarOpen, true);
+
+      // Load embedded Hassar project data
+      loadDataset(DEFAULT_PARCELS, 'مشروع حصار الزراعي', 'Hassar 16-11-2026 • نظام GIS', false);
+
+      // Setup Drag & Drop KML/KMZ
+      setupDragAndDrop();
+    }
+
+    // =========================================================================
+    // 5. DATASET LOADING, RENDERING & Z-ORDERING
+    // =========================================================================
+    function loadDataset(rawParcels, title, subtitle, isCustom = false, customFileName = '') {
+      // Clear previous layers
+      Object.values(categoryLayers).forEach(group => {
+        if (map.hasLayer(group)) map.removeLayer(group);
+      });
+      categoryLayers = {};
+      parcelLayerMap.clear();
+      activeHighlightId = null;
+
+      // Update headers
+      document.getElementById('projectTitle').textContent = title;
+      document.getElementById('projectSubtitle').textContent = subtitle;
+      const customBanner = document.getElementById('customFileBanner');
+      if (isCustom) {
+        document.getElementById('customFileName').textContent = customFileName;
+        customBanner.classList.remove('hidden');
+      } else {
+        customBanner.classList.add('hidden');
+      }
+
+      // Enrich parcels with parsed coordinates, geodesic area, and centroid
+      currentParcels = rawParcels.map((p, idx) => {
+        const latlngs = Array.isArray(p.latlngs) ? p.latlngs : parseCoords(p.coords);
+        const areaM2 = computeGeodesicAreaM2(latlngs);
+        const calcDonam = areaM2 / IRAQI_DONAM_M2;
+        const calcHectare = areaM2 / 10000;
+        const centroid = computeCentroid(latlngs);
+        return {
+          ...p,
+          id: p.id || `feat_${idx}`,
+          cat: CATEGORIES[p.cat] ? p.cat : 'imported',
+          latlngs,
+          areaM2,
+          calcDonam,
+          calcHectare,
+          centroid
+        };
+      }).filter(p => p.latlngs.length >= 3);
+
+      // Initialize visibility & LayerGroups for present categories
+      Object.keys(CATEGORIES).forEach(catKey => {
+        categoryVisibility[catKey] = true;
+        categoryLayers[catKey] = L.layerGroup().addTo(map);
+      });
+
+      // Sort parcels: boundary first, then descending by area so smaller plots sit ON TOP for easy clicking!
+      const sortedForDrawing = [...currentParcels].sort((a, b) => {
+        if (a.cat === 'boundary' && b.cat !== 'boundary') return -1;
+        if (b.cat === 'boundary' && a.cat !== 'boundary') return 1;
+        return b.areaM2 - a.areaM2;
+      });
+
+      sortedForDrawing.forEach(parcel => {
+        const styleCfg = CATEGORIES[parcel.cat] || CATEGORIES.imported;
+        const isBoundary = Boolean(styleCfg.isBoundary);
+
+        const poly = L.polygon(parcel.latlngs, {
+          pane: isBoundary ? 'boundaryPane' : 'parcelsPane',
+          color: styleCfg.strokeColor,
+          weight: styleCfg.weight,
+          dashArray: styleCfg.dashArray || null,
+          fillColor: styleCfg.fillColor,
+          fillOpacity: isBoundary ? 0.08 : currentOpacity,
+          opacity: isBoundary ? 0.95 : 0.92,
+          smoothFactor: 1.0
+        });
+
+        // Hover effect
+        poly.on('mouseover', function () {
+          if (measureActive) return;
+          if (!isBoundary) {
+            this.setStyle({
+              weight: (styleCfg.weight || 2) + 1.5,
+              fillOpacity: Math.min(0.85, currentOpacity + 0.22)
+            });
+          } else {
+            this.setStyle({ weight: 3.5 });
+          }
+        });
+
+        poly.on('mouseout', function () {
+          if (activeHighlightId === parcel.id) return;
+          resetPolygonStyle(parcel, this);
+        });
+
+        // Click behavior (prevent popup opening when measuring)
+        poly.on('click', function (ev) {
+          if (measureActive) {
+            L.DomEvent.stopPropagation(ev);
+            addMeasurePoint(ev.latlng);
+            return;
+          }
+          highlightParcel(parcel.id, false);
+        });
+
+        // Bind Rich Arabic Popup
+        poly.bindPopup(() => buildPopupHTML(parcel), {
+          maxWidth: 320,
+          autoPanPadding: [24, 72]
+        });
+
+        poly.on('popupclose', () => {
+          if (activeHighlightId === parcel.id) {
+            activeHighlightId = null;
+            resetPolygonStyle(parcel, poly);
+          }
+        });
+
+        // Bind Permanent Label Tooltip (for inner parcels)
+        if (!isBoundary) {
+          const shortName = parcel.name.length > 22 ? parcel.name.slice(0, 20) + '…' : parcel.name;
+          poly.bindTooltip(shortName, {
+            permanent: true,
+            direction: 'center',
+            className: 'parcel-label',
+            opacity: 0.95
+          });
+        }
+
+        poly.addTo(categoryLayers[parcel.cat]);
+        parcelLayerMap.set(parcel.id, { parcel, polygon: poly });
+      });
+
+      // Render UI components
+      document.getElementById('totalParcelsBadge').textContent = currentParcels.length;
+      updateKPIs();
+      renderCategoryControls();
+      populateCategoryFilterSelect();
+      renderParcelList();
+      fitAllBounds(true);
+      refreshLabelsVisibility();
+    }
+
+    function resetPolygonStyle(parcel, poly) {
+      const styleCfg = CATEGORIES[parcel.cat] || CATEGORIES.imported;
+      const isBoundary = Boolean(styleCfg.isBoundary);
+      poly.setStyle({
+        color: styleCfg.strokeColor,
+        weight: styleCfg.weight,
+        dashArray: styleCfg.dashArray || null,
+        fillColor: styleCfg.fillColor,
+        fillOpacity: isBoundary ? 0.08 : currentOpacity
+      });
+    }
+
+    // =========================================================================
+    // 6. POPUP CARD GENERATOR
+    // =========================================================================
+    function buildPopupHTML(parcel) {
+      const cat = CATEGORIES[parcel.cat] || CATEGORIES.imported;
+      const [cLat, cLng] = parcel.centroid;
+      const mapsUrl = `https://www.google.com/maps?q=${cLat.toFixed(6)},${cLng.toFixed(6)}`;
+      const statedHTML = parcel.statedArea !== null && parcel.statedArea !== undefined
+        ? `<span class="text-base font-extrabold text-amber-300">${fmtNum(parcel.statedArea, 2)}</span> <span class="text-[11px] text-slate-300">دونم</span>`
+        : `<span class="text-xs font-semibold text-slate-400">غير مذكورة</span>`;
+
+      const descLines = escapeHtml(parcel.desc || 'لا توجد ملاحظات إضافية')
+        .split('\n')
+        .map(line => `<div class="py-0.5">${line}</div>`)
+        .join('');
+
+      return `
+        <div class="text-right">
+          <!-- Popup Header -->
+          <div class="p-3.5 pl-11 border-b border-slate-700/80 bg-slate-800/70">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-3 h-3 rounded-full shrink-0 border border-white/40" style="background:${cat.fillColor}"></span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-900/90 text-slate-200 border border-slate-700">${escapeHtml(cat.shortLabel)}</span>
+            </div>
+            <h3 class="text-sm font-extrabold text-white leading-snug">${escapeHtml(parcel.name)}</h3>
+          </div>
+
+          <!-- Area Metrics -->
+          <div class="p-3.5 space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                <div class="text-[10px] text-slate-400 mb-0.5">المساحة المذكورة</div>
+                <div>${statedHTML}</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/35">
+                <div class="text-[10px] text-emerald-300 mb-0.5">المحسوبة جيوديسياً</div>
+                <div>
+                  <span class="text-base font-extrabold text-emerald-400">${fmtNum(parcel.calcDonam, 2)}</span>
+                  <span class="text-[11px] text-emerald-200">دونم</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-300 bg-slate-950/70 px-3 py-1.5 rounded-xl border border-slate-800">
+              <span>${fmtNum(parcel.calcHectare, 2)} هكتار</span>
+              <span class="text-slate-600">•</span>
+              <span>${fmtNum(parcel.areaM2, 0)} م²</span>
+            </div>
+
+            <!-- Description -->
+            <div class="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-xs text-slate-200 leading-relaxed max-h-28 overflow-y-auto custom-scroll">
+              ${descLines}
+            </div>
+
+            <!-- Centroid Coordinates -->
+            <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+              <span dir="ltr" class="font-mono text-slate-300">${cLat.toFixed(6)}, ${cLng.toFixed(6)}</span>
+              <button onclick="copyCoords('${cLat.toFixed(6)}, ${cLng.toFixed(6)}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition cursor-pointer">
+                نسخ الإحداثيات
+              </button>
+            </div>
+
+            <!-- Google Maps Action -->
+            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
+              class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 !text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>فتح في خرائط Google</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 7. SIDEBAR KPIs, LAYER TOGGLES & PARCEL SEARCH LIST
+    // =========================================================================
+    function updateKPIs() {
+      const boundary = currentParcels.find(p => p.cat === 'boundary');
+      const inner = currentParcels.filter(p => p.cat !== 'boundary');
+
+      const totalStated = boundary && boundary.statedArea ? boundary.statedArea : inner.reduce((acc, p) => acc + (p.statedArea || 0), 0);
+      const totalCalc = boundary ? boundary.calcDonam : inner.reduce((acc, p) => acc + p.calcDonam, 0);
+
+      const innerCalcSum = inner.reduce((acc, p) => acc + p.calcDonam, 0);
+      const innerStatedSum = inner.reduce((acc, p) => acc + (p.statedArea || 0), 0);
+
+      document.getElementById('kpiTotalStated').innerHTML = `${fmtNum(totalStated, 1)} <span class="text-xs font-semibold text-slate-300">دونم</span>`;
+      document.getElementById('kpiTotalCalcNote').textContent = `جيوديسي: ${fmtNum(totalCalc, 1)} دونم`;
+
+      document.getElementById('kpiInnerCalc').innerHTML = `${fmtNum(innerCalcSum, 1)} <span class="text-xs font-semibold text-slate-300">دونم</span>`;
+      document.getElementById('kpiInnerStated').textContent = `المذكور: ${fmtNum(innerStatedSum, 1)} دونم • ${inner.length} قطعة`;
+    }
+
+    function renderCategoryControls() {
+      const container = document.getElementById('categoryList');
+      container.innerHTML = '';
+
+      // Group stats
+      const stats = {};
+      currentParcels.forEach(p => {
+        if (!stats[p.cat]) {
+          stats[p.cat] = { count: 0, stated: 0, hasStated: false, calc: 0 };
+        }
+        stats[p.cat].count += 1;
+        stats[p.cat].calc += p.calcDonam;
+        if (p.statedArea !== null && p.statedArea !== undefined) {
+          stats[p.cat].stated += p.statedArea;
+          stats[p.cat].hasStated = true;
+        }
+      });
+
+      const activeCatKeys = Object.keys(stats).sort((a, b) => (CATEGORIES[a]?.order || 99) - (CATEGORIES[b]?.order || 99));
+
+      activeCatKeys.forEach(catKey => {
+        const cfg = CATEGORIES[catKey] || CATEGORIES.imported;
+        const st = stats[catKey];
+        const visible = categoryVisibility[catKey];
+
+        const card = document.createElement('div');
+        card.className = `p-2.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-2.5 ${
+          visible
+            ? 'bg-slate-800/75 border-slate-700/80 hover:border-slate-500'
+            : 'bg-slate-900/50 border-slate-800/70 opacity-55 hover:opacity-80'
+        }`;
+        card.onclick = () => toggleCategory(catKey);
+
+        const badgeBorder = catKey === 'ready' ? `border: 2px solid ${cfg.strokeColor};` : (catKey === 'boundary' ? `border: 2px dashed ${cfg.strokeColor};` : `border: 1px solid rgba(255,255,255,0.35);`);
+
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-4 h-4 rounded-md shrink-0 shadow-sm" style="background:${cfg.fillColor}; ${badgeBorder}"></div>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-slate-100 truncate">${escapeHtml(cfg.label)}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                <span>جيوديسي: <strong class="text-emerald-300">${fmtNum(st.calc, 1)} دونم</strong></span>
+                ${st.hasStated ? `<span>• مذكور: <strong class="text-amber-300">${fmtNum(st.stated, 1)} دونم</strong></span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-slate-950/80 text-slate-300 border border-slate-700/70">${st.count}</span>
+            <div class="w-9 h-5 rounded-full p-0.5 transition-colors ${visible ? 'bg-emerald-500' : 'bg-slate-700'}">
+              <div class="w-4 h-4 rounded-full bg-white shadow transform transition-transform ${visible ? '-translate-x-4' : 'translate-x-0'}"></div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function toggleCategory(catKey) {
+      categoryVisibility[catKey] = !categoryVisibility[catKey];
+      const group = categoryLayers[catKey];
+      if (group) {
+        if (categoryVisibility[catKey]) {
+          group.addTo(map);
+        } else {
+          map.removeLayer(group);
+        }
+      }
+      renderCategoryControls();
+      refreshLabelsVisibility();
+    }
+
+    function setAllCategories(show) {
+      Object.keys(categoryLayers).forEach(catKey => {
+        categoryVisibility[catKey] = show;
+        const group = categoryLayers[catKey];
+        if (show) {
+          if (!map.hasLayer(group)) group.addTo(map);
+        } else {
+          if (map.hasLayer(group)) map.removeLayer(group);
+        }
+      });
+      renderCategoryControls();
+      refreshLabelsVisibility();
+    }
+
+    function populateCategoryFilterSelect() {
+      const sel = document.getElementById('parcelCatFilter');
+      sel.innerHTML = '<option value="all">جميع التصنيفات</option>';
+      const present = new Set(currentParcels.map(p => p.cat));
+      Object.keys(CATEGORIES)
+        .filter(k => present.has(k))
+        .sort((a, b) => CATEGORIES[a].order - CATEGORIES[b].order)
+        .forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k;
+          opt.textContent = CATEGORIES[k].label;
+          sel.appendChild(opt);
+        });
+    }
+
+    function renderParcelList() {
+      const query = (document.getElementById('parcelSearchInput').value || '').trim().toLowerCase();
+      const catFilter = document.getElementById('parcelCatFilter').value;
+      const clearBtn = document.getElementById('clearSearchBtn');
+      clearBtn.classList.toggle('hidden', query.length === 0);
+
+      const filtered = currentParcels.filter(p => {
+        if (catFilter !== 'all' && p.cat !== catFilter) return false;
+        if (!query) return true;
+        const catLabel = (CATEGORIES[p.cat]?.label || '').toLowerCase();
+        return (
+          p.name.toLowerCase().includes(query) ||
+          (p.desc || '').toLowerCase().includes(query) ||
+          catLabel.includes(query)
+        );
+      });
+
+      document.getElementById('parcelResultCount').textContent = `${filtered.length} قطعة`;
+
+      const listEl = document.getElementById('parcelListContainer');
+      listEl.innerHTML = '';
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400">
+            لا توجد قطع مطابقة لبحثك.
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const cfg = CATEGORIES[p.cat] || CATEGORIES.imported;
+        const item = document.createElement('button');
+        item.className = 'w-full text-right p-2.5 rounded-xl bg-slate-800/55 hover:bg-slate-800 border border-slate-700/50 hover:border-emerald-500/50 transition flex items-center justify-between gap-2 cursor-pointer group';
+        item.onclick = () => focusParcel(p.id);
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-2.5 h-8 rounded-full shrink-0" style="background:${cfg.fillColor}; ${p.cat === 'ready' ? 'border:1px solid #0ea5e9;' : ''}"></span>
+            <div class="min-w-0">
+              <div class="text-xs font-extrabold text-white group-hover:text-emerald-300 truncate">${escapeHtml(p.name)}</div>
+              <div class="text-[10px] text-slate-400 truncate">${escapeHtml(cfg.shortLabel)}</div>
+            </div>
+          </div>
+          <div class="text-left shrink-0">
+            <div class="text-xs font-extrabold text-emerald-400">${fmtNum(p.calcDonam, 1)} <span class="text-[10px] font-normal text-slate-300">دونم</span></div>
+            ${p.statedArea !== null && p.statedArea !== undefined
+              ? `<div class="text-[10px] text-amber-300/90">مذكور: ${fmtNum(p.statedArea, 1)}</div>`
+              : `<div class="text-[10px] text-slate-500">محسوب تلقائياً</div>`
+            }
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function clearSearch() {
+      document.getElementById('parcelSearchInput').value = '';
+      renderParcelList();
+    }
+
+    function focusParcel(id) {
+      const entry = parcelLayerMap.get(id);
+      if (!entry) return;
+      const { parcel, polygon } = entry;
+
+      // Ensure category is visible
+      if (!categoryVisibility[parcel.cat]) {
+        toggleCategory(parcel.cat);
+      }
+
+      // Close drawer on mobile so user sees the map clearly
+      if (window.innerWidth < 768) {
+        toggleSidebar(false);
+      }
+
+      highlightParcel(id, true);
+    }
+
+    function highlightParcel(id, fly = false) {
+      // Reset old highlight
+      if (activeHighlightId && activeHighlightId !== id) {
+        const oldEntry = parcelLayerMap.get(activeHighlightId);
+        if (oldEntry) resetPolygonStyle(oldEntry.parcel, oldEntry.polygon);
+      }
+
+      const entry = parcelLayerMap.get(id);
+      if (!entry) return;
+      const { parcel, polygon } = entry;
+      activeHighlightId = id;
+
+      if (parcel.cat !== 'boundary') {
+        polygon.setStyle({
+          color: '#ffffff',
+          weight: 3.5,
+          fillOpacity: Math.min(0.85, currentOpacity + 0.25)
+        });
+      }
+
+      if (fly) {
+        map.flyToBounds(polygon.getBounds(), {
+          padding: [65, 65],
+          maxZoom: 17,
+          duration: 0.75
+        });
+        setTimeout(() => {
+          polygon.openPopup(parcel.centroid);
+        }, 420);
+      }
+    }
+
+    // =========================================================================
+    // 8. TOOLBAR CONTROLS (BASEMAPS, LABELS, OPACITY, FIT, SIDEBAR, TABS)
+    // =========================================================================
+    function setBasemap(key) {
+      if (!basemaps[key] || activeBasemapKey === key) return;
+      map.removeLayer(basemaps[activeBasemapKey]);
+      basemaps[key].addTo(map);
+      basemaps[key].bringToBack();
+      activeBasemapKey = key;
+
+      ['esri', 'google', 'osm'].forEach(k => {
+        const btn = document.getElementById(`bm-${k}`);
+        if (k === key) {
+          btn.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition bg-emerald-600 text-white cursor-pointer';
+        } else {
+          btn.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition text-slate-300 hover:text-white cursor-pointer';
+        }
+      });
+    }
+
+    function toggleLabels() {
+      labelsEnabled = !labelsEnabled;
+      const btn = document.getElementById('btnToggleLabels');
+      if (labelsEnabled) {
+        btn.className = 'px-2.5 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/50 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer';
+        showToast('تم تفعيل التسميات (تظهر تلقائياً عند التقريب ≥ 15)', 'success');
+      } else {
+        btn.className = 'px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer';
+        showToast('تم إخفاء التسميات', 'info');
+      }
+      refreshLabelsVisibility();
+    }
+
+    function refreshLabelsVisibility() {
+      const z = map.getZoom();
+      const shouldShow = labelsEnabled && z >= 15;
+      parcelLayerMap.forEach(({ parcel, polygon }) => {
+        if (parcel.cat === 'boundary') return;
+        const tooltip = polygon.getTooltip();
+        if (!tooltip) return;
+        if (shouldShow && categoryVisibility[parcel.cat]) {
+          polygon.openTooltip();
+        } else {
+          polygon.closeTooltip();
+        }
+      });
+    }
+
+    function updateOpacity(val) {
+      currentOpacity = Number(val) / 100;
+      document.getElementById('opacityVal').textContent = `${val}%`;
+      parcelLayerMap.forEach(({ parcel, polygon }) => {
+        if (parcel.cat === 'boundary') return;
+        polygon.setStyle({ fillOpacity: currentOpacity });
+      });
+    }
+
+    function fitAllBounds(instant = false) {
+      const boundaryEntry = parcelLayerMap.get('all_land');
+      let bounds = null;
+      if (boundaryEntry) {
+        bounds = boundaryEntry.polygon.getBounds();
+      } else {
+        const group = L.featureGroup();
+        parcelLayerMap.forEach(({ polygon }) => group.addLayer(polygon));
+        if (group.getLayers().length > 0) bounds = group.getBounds();
+      }
+      if (bounds && bounds.isValid()) {
+        if (instant) {
+          map.fitBounds(bounds, { padding: [36, 36] });
+        } else {
+          map.flyToBounds(bounds, { padding: [36, 36], duration: 0.7 });
+        }
+      }
+    }
+
+    function toggleSidebar(forceState, instant = false) {
+      sidebarOpen = typeof forceState === 'boolean' ? forceState : !sidebarOpen;
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      const openBtn = document.getElementById('openSidebarBtn');
+
+      if (sidebarOpen) {
+        sidebar.classList.remove('translate-x-full', 'md:w-0', 'md:border-0', 'md:overflow-hidden');
+        sidebar.classList.add('translate-x-0', 'md:w-[395px]');
+        backdrop.classList.remove('hidden');
+        openBtn.classList.add('md:hidden');
+      } else {
+        sidebar.classList.add('translate-x-full', 'md:w-0', 'md:border-0', 'md:overflow-hidden');
+        sidebar.classList.remove('translate-x-0', 'md:w-[395px]');
+        backdrop.classList.add('hidden');
+        openBtn.classList.remove('md:hidden');
+      }
+
+      // Trigger Leaflet resize after CSS transition
+      setTimeout(() => map && map.invalidateSize(), instant ? 50 : 320);
+    }
+
+    function switchTab(tab) {
+      const btnLayers = document.getElementById('tabBtnLayers');
+      const btnParcels = document.getElementById('tabBtnParcels');
+      const contentLayers = document.getElementById('tabContentLayers');
+      const contentParcels = document.getElementById('tabContentParcels');
+
+      if (tab === 'layers') {
+        btnLayers.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow cursor-pointer';
+        btnParcels.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-slate-800/70 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer';
+        contentLayers.classList.remove('hidden');
+        contentParcels.classList.add('hidden');
+        contentParcels.classList.remove('flex');
+      } else {
+        btnParcels.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow cursor-pointer';
+        btnLayers.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-slate-800/70 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer';
+        contentLayers.classList.add('hidden');
+        contentParcels.classList.remove('hidden');
+        contentParcels.classList.add('flex');
+      }
+    }
+
+    // =========================================================================
+    // 9. INTERACTIVE IRAQI DONAM MEASUREMENT TOOL
+    // =========================================================================
+    function toggleMeasureMode(force) {
+      measureActive = typeof force === 'boolean' ? force : !measureActive;
+      const btn = document.getElementById('btnMeasure');
+      const panel = document.getElementById('measurePanel');
+      const mapEl = document.getElementById('map');
+
+      if (measureActive) {
+        map.closePopup();
+        btn.className = 'px-2.5 py-2 rounded-xl bg-amber-500 text-slate-950 border border-amber-300 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-extrabold transition cursor-pointer';
+        panel.classList.remove('hidden');
+        mapEl.classList.add('measuring-cursor');
+        showToast('وضع القياس مُفعّل: انقر على الخريطة لرسم المسار أو المضلع', 'info');
+      } else {
+        btn.className = 'px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition cursor-pointer';
+        panel.classList.add('hidden');
+        mapEl.classList.remove('measuring-cursor');
+        clearMeasure();
+      }
+    }
+
+    function addMeasurePoint(latlng) {
+      measurePoints.push([latlng.lat, latlng.lng]);
+      renderMeasureGeometry();
+    }
+
+    function undoMeasurePoint() {
+      if (measurePoints.length === 0) return;
+      measurePoints.pop();
+      renderMeasureGeometry();
+    }
+
+    function clearMeasure() {
+      measurePoints = [];
+      measureLayerGroup.clearLayers();
+      updateMeasureReadout(0, 0);
+    }
+
+    function renderMeasureGeometry() {
+      measureLayerGroup.clearLayers();
+
+      // Draw polygon if >= 3 points
+      if (measurePoints.length >= 3) {
+        L.polygon(measurePoints, {
+          pane: 'measurePane',
+          color: '#fbbf24',
+          weight: 2.5,
+          dashArray: '6, 4',
+          fillColor: '#f59e0b',
+          fillOpacity: 0.25
+        }).addTo(measureLayerGroup);
+      } else if (measurePoints.length === 2) {
+        L.polyline(measurePoints, {
+          pane: 'measurePane',
+          color: '#fbbf24',
+          weight: 2.5,
+          dashArray: '6, 4'
+        }).addTo(measureLayerGroup);
+      }
+
+      // Draw numbered vertex markers
+      measurePoints.forEach((pt, idx) => {
+        L.circleMarker(pt, {
+          pane: 'measurePane',
+          radius: 5.5,
+          color: '#0f172a',
+          weight: 2,
+          fillColor: idx === 0 ? '#10b981' : '#fbbf24',
+          fillOpacity: 1
+        }).addTo(measureLayerGroup);
+      });
+
+      // Compute distance / perimeter
+      let totalDist = 0;
+      for (let i = 0; i < measurePoints.length - 1; i++) {
+        totalDist += computeDistanceM(measurePoints[i], measurePoints[i + 1]);
+      }
+      if (measurePoints.length >= 3) {
+        totalDist += computeDistanceM(measurePoints[measurePoints.length - 1], measurePoints[0]);
+      }
+
+      // Compute area
+      const areaM2 = measurePoints.length >= 3 ? computeGeodesicAreaM2(measurePoints) : 0;
+      updateMeasureReadout(totalDist, areaM2);
+    }
+
+    function updateMeasureReadout(distM, areaM2) {
+      document.getElementById('measurePtsCount').textContent = measurePoints.length;
+      document.getElementById('measureDistVal').textContent =
+        distM >= 1000 ? `${(distM / 1000).toFixed(2)} كم` : `${Math.round(distM).toLocaleString('en-US')} م`;
+      document.getElementById('measureDonamVal').textContent = `${fmtNum(areaM2 / IRAQI_DONAM_M2, 2)} دونم`;
+      document.getElementById('measureM2Val').textContent = `${fmtNum(areaM2, 0)} م²`;
+    }
+
+    // =========================================================================
+    // 10. CLIENT-SIDE KML / KMZ FILE LOADER (JSZip + DOMParser)
+    // =========================================================================
+    function handleFileInput(event) {
+      const file = event.target.files?.[0];
+      if (file) processUploadedFile(file);
+      event.target.value = '';
+    }
+
+    function setupDragAndDrop() {
+      const overlay = document.getElementById('dropOverlay');
+      let dragCounter = 0;
+
+      window.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        overlay.classList.remove('hidden');
+      });
+
+      window.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+          dragCounter = 0;
+          overlay.classList.add('hidden');
+        }
+      });
+
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        overlay.classList.add('hidden');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) processUploadedFile(file);
+      });
+    }
+
+    async function processUploadedFile(file) {
+      const lowerName = file.name.toLowerCase();
+      if (!lowerName.endsWith('.kmz') && !lowerName.endsWith('.kml')) {
+        showToast('يرجى اختيار ملف بصيغة .kmz أو .kml فقط', 'error');
+        return;
+      }
+
+      try {
+        let kmlText = '';
+        if (lowerName.endsWith('.kmz')) {
+          const zip = await JSZip.loadAsync(file);
+          const kmlEntry = Object.values(zip.files).find(f => !f.dir && f.name.toLowerCase().endsWith('.kml'));
+          if (!kmlEntry) throw new Error('لم يتم العثور على ملف KML داخل أرشيف KMZ');
+          kmlText = await kmlEntry.async('string');
+        } else {
+          kmlText = await file.text();
+        }
+
+        const parsed = parseKMLString(kmlText);
+        if (parsed.length === 0) {
+          showToast('لم يتم العثور على مضلعات (Polygons) صالحة داخل الملف', 'error');
+          return;
+        }
+
+        loadDataset(parsed, file.name.replace(/\.(kmz|kml)$/i, ''), `ملف مستورد • ${parsed.length} مضلع`, true, file.name);
+        showToast(`تم تحميل ${parsed.length} قطعة بنجاح من ${file.name}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast(`تعذر قراءة الملف: ${err.message}`, 'error');
+      }
+    }
+
+    function parseKMLString(kmlText) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(kmlText, 'text/xml');
+      const placemarks = Array.from(xml.getElementsByTagName('Placemark'));
+      const features = [];
+
+      placemarks.forEach((pm, idx) => {
+        const coordsNode = pm.querySelector('Polygon outerBoundaryIs LinearRing coordinates, coordinates');
+        if (!coordsNode) return;
+        const latlngs = parseCoords(coordsNode.textContent);
+        if (latlngs.length < 3) return;
+
+        const name = pm.querySelector('name')?.textContent?.trim() || `قطعة ${idx + 1}`;
+        const desc = pm.querySelector('description')?.textContent?.trim() || '';
+
+        // Gather parent folder/document names for smart classification
+        let ancestorsText = '';
+        let parent = pm.parentElement;
+        while (parent) {
+          const pName = parent.querySelector(':scope > name')?.textContent || '';
+          ancestorsText += ' ' + pName;
+          parent = parent.parentElement;
+        }
+
+        const cat = inferCategory(name, desc, ancestorsText);
+        const statedArea = extractStatedDonam(desc);
+
+        features.push({
+          id: `imp_${idx}_${Date.now()}`,
+          name,
+          cat,
+          statedArea,
+          desc,
+          latlngs
+        });
+      });
+
+      return features;
+    }
+
+    function inferCategory(name, desc, ancestors) {
+      const text = `${name} ${desc} ${ancestors}`.toLowerCase();
+      if (text.includes('all land') || text.includes('الكلية')) return 'boundary';
+      if (text.includes('basin') || text.includes('حوض') || text.includes('أحواض')) return 'water';
+      if (text.includes('village') || text.includes('camp') || text.includes('الكامب') || text.includes('القرية') || text.includes('resedential') || text.includes('residential')) return 'residential';
+      if (text.includes('مستقبل') && text.includes('زيتون')) return 'future_olive';
+      if (text.includes('صخري')) return 'rocky';
+      if (text.includes('تيكلة') || text.includes('ماينزرع') || text.includes('مايزع') || text.includes('لايصلح') || text.includes('لا يصلح') || text.includes('hill') || text.includes('تل ')) return 'non_arable';
+      if (text.includes('محروثة') || text.includes('ready land')) return 'ready';
+      if (text.includes('زيتون') || text.includes('olive')) return 'olive';
+      if (text.includes('حنطة') || text.includes('wheat')) return 'wheat';
+      if (text.includes('جت') || text.includes('alfalfa')) return 'alfalfa';
+      return 'imported';
+    }
+
+    function extractStatedDonam(desc) {
+      if (!desc) return null;
+      const match = desc.match(/المساحة\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)/);
+      return match ? parseFloat(match[1]) : null;
+    }
+
+    function restoreDefaultProject() {
+      loadDataset(DEFAULT_PARCELS, 'مشروع حصار الزراعي', 'Hassar 16-11-2026 • نظام GIS', false);
+      showToast('تمت استعادة خريطة مشروع حصار الافتراضية (61 قطعة)', 'success');
+    }
+
+    // =========================================================================
+    // 11. CLIPBOARD & TOAST UTILITIES
+    // =========================================================================
+    function copyCoords(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(`تم نسخ الإحداثيات: ${text}`, 'success');
+      } catch (e) {
+        showToast('تعذر النسخ التلقائي', 'error');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const colors = {
+        success: 'bg-emerald-950/95 border-emerald-500/60 text-emerald-200',
+        error: 'bg-rose-950/95 border-rose-500/60 text-rose-200',
+        info: 'bg-slate-900/95 border-sky-500/50 text-sky-200'
+      };
+      const el = document.createElement('div');
+      el.className = `px-3.5 py-2.5 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-bold animate-fade-up ${colors[type] || colors.info}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => el.remove(), 260);
+      }, 3200);
+    }
+
+    // Boot Application
+    window.addEventListener('DOMContentLoaded', initMap);
+  </script>
+</body>
+</html>
